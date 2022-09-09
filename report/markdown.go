@@ -21,8 +21,8 @@ func NewMarkdownWriter(filepath string) (*MarkdownWriter, error) {
 }
 
 //WriteString writes a string to the markdown file
-func (w *MarkdownWriter) WriteString(text string) error {
-	_, err := w.file.WriteString(text)
+func (w *MarkdownWriter) WriteLine(text string) error {
+	_, err := w.file.WriteString(text + "\n")
 	return err
 }
 
@@ -33,32 +33,43 @@ func (w *MarkdownWriter) Close() error {
 
 //WriteHeader writes a header to the markdown file
 func (w *MarkdownWriter) WriteHeader(header string, level int) error {
-	return w.WriteString(strings.Repeat("#", level) + " " + header)
+	return w.WriteLine(strings.Repeat("#", level) + " " + header)
 }
 
 //WriteReport writes a report to the markdown file
 func (w *MarkdownWriter) WriteReport(r *Reporter) error {
 	//Write title
 	w.WriteHeader(r.Name, 1)
+	w.WriteLine("")
 
 	//Information
 	w.WriteHeader("Information", 2)
-	for key, value := range r.Attributes {
-		w.WriteString("```ini")
-		if err := w.WriteString(key + "=" + value); err != nil {
-			return err
-		}
-		w.WriteString("```")
-	}
+	w.WriteAttributes(r.Attributes)
+	w.WriteLine("")
 
 	//Results
 	w.WriteHeader("Results", 2)
 	table := CreateTable(r)
+	return w.WriteTable(table)
+}
 
-	w.WriteString("|" + strings.Join(table.Headers, "|") + "|")
-	w.WriteString("|" + strings.Repeat("---|", len(table.Headers)))
+func (w *MarkdownWriter) WriteAttributes(attributes map[string]string) error {
+	for key, value := range attributes {
+		w.WriteLine("```ini")
+		if err := w.WriteLine(key + "=" + value); err != nil {
+			return err
+		}
+		w.WriteLine("```")
+	}
+
+	return nil
+}
+
+func (w *MarkdownWriter) WriteTable(table *Table) error {
+	w.WriteLine("|" + strings.Join(table.Headers, "|") + "|")
+	w.WriteLine("|" + strings.Repeat("---|", len(table.Headers)))
 	for _, row := range table.Rows {
-		w.WriteString("|" + strings.Join(row.Values, "|") + "|")
+		w.WriteLine("|" + strings.Join(row.Values, "|") + "|")
 	}
 
 	return nil
